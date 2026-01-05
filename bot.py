@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+import os
 
 # ---------------------- إعدادات البوت ----------------------
 intents = discord.Intents.default()
@@ -53,15 +54,11 @@ async def process_roles(interaction, member, roles_input, action_type):
 @bot.tree.command(name="say", description="يجعل البوت يرسل رسالتك داخل نموذج منسق")
 @app_commands.describe(message="النص الذي تريد من البوت كتابته")
 async def say(interaction: discord.Interaction, message: str):
-    # إنشاء نموذج منسق للرسالة
     embed = discord.Embed(
         description=message,
-        color=discord.Color.blue() # يمكنك تغيير اللون
+        color=discord.Color.blue() 
     )
-    # إضافة صورة واسم الشخص الذي أرسل الأمر في أسفل النموذج (اختياري)
     embed.set_footer(text=f"أرسل بواسطة: {interaction.user.display_name}", icon_url=interaction.user.display_avatar.url)
-    
-    # إرسال الرسالة
     await interaction.response.send_message(embed=embed)
 
 @bot.tree.command(name="اعطاء-رتب", description="إعطاء حتى 10 رتب لشخص (افصل بينهم بفاصلة)")
@@ -91,5 +88,10 @@ async def check_role(interaction: discord.Interaction, role: discord.Role):
     await interaction.response.send_message(embed=embed)
 
 # ---------------------- تشغيل البوت ----------------------
-TOKEN = "MTQ1NzQ1NjM3MjI3MzY0NzcwNw.G7b1Ll.4HtU2F2iNZKncAsrmRC-PZhDpRSFVBvn-YfU4I"
-bot.run(TOKEN)
+# هنا نستخدم os.getenv لجلب التوكن من إعدادات Render بشكل سري
+TOKEN = os.getenv('DISCORD_TOKEN')
+
+if TOKEN:
+    bot.run(TOKEN)
+else:
+    print("❌ خطأ: التوكن غير موجود! يرجى إضافته في إعدادات Environment بـ Render.")

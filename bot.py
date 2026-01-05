@@ -87,11 +87,11 @@ async def check_role(interaction: discord.Interaction, role: discord.Role):
         embed.add_field(name=f"العدد الإجمالي: {len(members)}", value="\n".join(mentions))
     await interaction.response.send_message(embed=embed)
 
-# ---------------------- تشغيل البوت ----------------------
-# هنا نستخدم os.getenv لجلب التوكن من إعدادات Render بشكل سري
-TOKEN = os.getenv('DISCORD_TOKEN')
+# ---------------------- تشغيل البوت بشكل آمن ----------------------
+# (DISCORD_TOKEN) سيتم سحب التوكن من إعدادات رندر وليس من الكود
+TOKEN = os.getenv('MTQ1NzQ1NjM3MjI3MzY0NzcwNw.GV9rbx.T56VN0glgSmIZZZcOW9kx1yqEjNnOC3adZ_YYA')
 
 if TOKEN:
     bot.run(TOKEN)
 else:
-    print("❌ خطأ: التوكن غير موجود! يرجى إضافته في إعدادات Environment بـ Render.")
+    print("❌ خطأ: لم يتم العثور على التوكن! تأكد من إضافته في Environment Variables بموقع Render.")

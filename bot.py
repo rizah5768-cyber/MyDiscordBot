@@ -89,9 +89,9 @@ async def check_role(interaction: discord.Interaction, role: discord.Role):
 
 # ---------------------- تشغيل البوت بشكل آمن ----------------------
 # (DISCORD_TOKEN) سيتم سحب التوكن من إعدادات رندر وليس من الكود
-TOKEN = os.getenv('MTQ1NzQ1NjM3MjI3MzY0NzcwNw.GV9rbx.T56VN0glgSmIZZZcOW9kx1yqEjNnOC3adZ_YYA')
+TOKEN = os.getenv('DISCORD_TOKEN')
 
 if TOKEN:
     bot.run(TOKEN)
 else:
-    print("❌ خطأ: لم يتم العثور على التوكن! تأكد من إضافته في Environment Variables بموقع Render.")
+    print("❌ خطأ: لم يتم العثور على التوكن في إعدادات Render!")

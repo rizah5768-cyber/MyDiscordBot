@@ -2,7 +2,25 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import os
-from keep_alive import keep_alive 
+from flask import Flask
+from threading import Thread
+
+# ---------------------- نظام البقاء حياً (Flask) ----------------------
+# هذا الجزء مهم جداً لمنصة Render لكي لا يتوقف البوت
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "البوت يعمل بنجاح 24/7!"
+
+def run_flask():
+    # Render يستخدم المنفذ 10000 تلقائياً في الخطة المجانية
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run_flask)
+    t.start()
 
 # ---------------------- إعدادات البوت ----------------------
 intents = discord.Intents.default()
@@ -14,8 +32,9 @@ class MyBot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents)
 
     async def setup_hook(self):
+        # مزامنة أوامر السلاش عند تشغيل البوت
         await self.tree.sync()
-        print(f"✅ تم تحديث جميع الأوامر بما فيها كشف الرتب!")
+        print(f"✅ تم تحديث جميع الأوامر ومزامنتها بنجاح!")
 
 bot = MyBot()
 
@@ -52,14 +71,13 @@ async def remove_role(interaction: discord.Interaction, member: discord.Member, 
 @bot.tree.command(name="كشف-رتبة", description="يظهر قائمة بأسماء الأعضاء الذين لديهم هذه الرتبة")
 @app_commands.describe(role="اختر الرتبة المراد كشف أعضائها")
 async def list_role_members(interaction: discord.Interaction, role: discord.Role):
-    await interaction.response.defer() # للتعامل مع الرتب التي بها أعضاء كثر
+    await interaction.response.defer()
     
     members = role.members
     if not members:
         return await interaction.followup.send(f"⚠️ لا يوجد أعضاء يحملون رتبة {role.mention}")
 
-    # تنسيق القائمة
-    member_list = "\n".join([f"• {m.mention} ({m.name})" for m in members[:20]]) # عرض أول 20 عضو لتجنب طول الرسالة
+    member_list = "\n".join([f"• {m.mention} ({m.name})" for m in members[:20]])
     if len(members) > 20:
         member_list += f"\n\n... وغيرها {len(members) - 20} عضواً"
 
@@ -69,14 +87,20 @@ async def list_role_members(interaction: discord.Interaction, role: discord.Role
         color=role.color
     )
     embed.set_footer(text=f"إجمالي الأعضاء: {len(members)}")
-    
     await interaction.followup.send(embed=embed)
 
-# ---------------------- التشغيل ----------------------
-keep_alive()
-
-TOKEN = os.getenv('DISCORD_TOKEN')
-if TOKEN:
-    bot.run(TOKEN)
-else:
-    print("❌ التوكن مفقود!")
+# ---------------------- تشغيل البوت ----------------------
+if __name__ == "__main__":
+    # تشغيل خادم ويب مصغر في الخلفية لإبقاء البوت متصلاً
+    keep_alive()
+    
+    # قراءة التوكن من Environment Variables في Render
+    TOKEN = os.getenv('DISCORD_TOKEN')
+    
+    if TOKEN:
+        try:
+            bot.run(TOKEN)
+        except Exception as e:
+            print(f"❌ حدث خطأ أثناء محاولة تشغيل البوت: {e}")
+    else:
+        print("❌ التوكن (DISCORD_TOKEN) مفقود من إعدادات البيئة!")

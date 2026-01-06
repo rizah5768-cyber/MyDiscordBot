@@ -2,6 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import os
+from keep_alive import keep_alive  # استدعاء ملف البقاء حياً
 
 # ---------------------- إعدادات البوت ----------------------
 intents = discord.Intents.default()
@@ -13,70 +14,55 @@ class MyBot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents)
 
     async def setup_hook(self):
+        # مزامنة الأوامر مع ديسكورد
         await self.tree.sync()
-        print(f"✅ تمت مزامنة أوامر السلاش بنجاح!")
+        print(f"✅ تم تحديث أوامر السلاش!")
 
 bot = MyBot()
 
-# ---------------------- دالة معالجة الرتب ----------------------
-async def process_roles(interaction, member, roles_input, action_type):
-    role_names = [r.strip() for r in roles_input.split(',')]
-    if len(role_names) > 10:
-        return await interaction.response.send_message("❌ لا يمكنك معالجة أكثر من 10 رتب في المرة الواحدة.", ephemeral=True)
+# ---------------------- أوامر السلاش الذكية ----------------------
 
-    await interaction.response.defer()
-    success, failed = [], []
-    color = discord.Color.green() if action_type == "add" else discord.Color.red()
-
-    for name in role_names:
-        role = discord.utils.get(interaction.guild.roles, name=name) or \
-               (discord.utils.get(interaction.guild.roles, id=int(name.strip('<@&>')) if name.strip('<@&>').isdigit() else 0))
-        if role:
-            try:
-                if action_type == "add": await member.add_roles(role)
-                else: await member.remove_roles(role)
-                success.append(f"✅ {role.name}")
-            except: failed.append(f"❌ {name} (نقص صلاحيات)")
-        else: failed.append(f"❌ {name} (غير موجودة)")
-
-    embed = discord.Embed(title="إدارة الرتب", color=color)
-    embed.add_field(name="العضو المستهدف:", value=member.mention, inline=False)
-    if success:
-        label = "تم إعطاء الرتب:" if action_type == "add" else "تم إزالة الرتب:"
-        embed.add_field(name=label, value="\n".join(success), inline=False)
-    if failed:
-        embed.add_field(name="فشل في:", value="\n".join(failed), inline=False)
-    
-    await interaction.followup.send(embed=embed)
-
-# ---------------------- أوامر السلاش ----------------------
-
-@bot.tree.command(name="say", description="يجعل البوت يرسل رسالتك داخل نموذج منسق")
-@app_commands.describe(message="النص الذي تريد من البوت كتابته")
+@bot.tree.command(name="say", description="إرسال رسالة منسقة عبر البوت")
 async def say(interaction: discord.Interaction, message: str):
     embed = discord.Embed(description=message, color=discord.Color.blue())
-    embed.set_footer(text=f"أرسل بواسطة: {interaction.user.display_name}", icon_url=interaction.user.display_avatar.url)
+    embed.set_footer(text=f"بواسطة: {interaction.user.display_name}")
     await interaction.response.send_message(embed=embed)
 
-@bot.tree.command(name="اعطاء-رتب", description="إعطاء حتى 10 رتب لشخص (افصل بينهم بفاصلة)")
-@app_commands.describe(member="العضو المطلوب", roles="أسماء الرتب مفصولة بفاصلة")
-async def give_roles(interaction: discord.Interaction, member: discord.Member, roles: str):
+@bot.tree.command(name="اعطاء-رتبة", description="إعطاء رتبة لعضو (اختر من القائمة)")
+@app_commands.describe(member="العضو المستهدف", role="اختر الرتبة من القائمة")
+async def give_role(interaction: discord.Interaction, member: discord.Member, role: discord.Role):
     if not interaction.user.guild_permissions.manage_roles:
-        return await interaction.response.send_message("❌ لا تملك صلاحية إدارة الرتب", ephemeral=True)
-    await process_roles(interaction, member, roles, "add")
+        return await interaction.response.send_message("❌ ليس لديك صلاحية إدارة الرتب", ephemeral=True)
+    
+    try:
+        await member.add_roles(role)
+        embed = discord.Embed(title="✅ تم منح الرتبة", color=discord.Color.green())
+        embed.add_field(name="العضو:", value=member.mention)
+        embed.add_field(name="الرتبة:", value=role.mention)
+        await interaction.response.send_message(embed=embed)
+    except discord.Forbidden:
+        await interaction.response.send_message("❌ فشل: رتبة البوت أدنى من الرتبة المطلوبة أو تنقصه صلاحيات.", ephemeral=True)
 
-@bot.tree.command(name="ازالة-رتب", description="إزالة حتى 10 رتب من شخص (افصل بينهم بفاصلة)")
-@app_commands.describe(member="العضو المطلوب", roles="أسماء الرتب مفصولة بفاصلة")
-async def remove_roles(interaction: discord.Interaction, member: discord.Member, roles: str):
+@bot.tree.command(name="ازالة-رتبة", description="إزالة رتبة من عضو (اختر من القائمة)")
+@app_commands.describe(member="العضو المستهدف", role="اختر الرتبة من القائمة")
+async def remove_role(interaction: discord.Interaction, member: discord.Member, role: discord.Role):
     if not interaction.user.guild_permissions.manage_roles:
-        return await interaction.response.send_message("❌ لا تملك صلاحية إدارة الرتب", ephemeral=True)
-    await process_roles(interaction, member, roles, "remove")
+        return await interaction.response.send_message("❌ ليس لديك صلاحية إدارة الرتب", ephemeral=True)
+
+    try:
+        await member.remove_roles(role)
+        embed = discord.Embed(title="🗑️ تم إزالة الرتبة", color=discord.Color.red())
+        embed.add_field(name="العضو:", value=member.mention)
+        embed.add_field(name="الرتبة:", value=role.mention)
+        await interaction.response.send_message(embed=embed)
+    except discord.Forbidden:
+        await interaction.response.send_message("❌ فشل: رتبة البوت أدنى من الرتبة المطلوبة.", ephemeral=True)
 
 # ---------------------- التشغيل ----------------------
-# ملاحظة: هذا السطر هو الأهم لحماية التوكن
-TOKEN = os.getenv('DISCORD_TOKEN')
+keep_alive() # تشغيل السيرفر الوهمي لمنع الإغلاق في Render
 
+TOKEN = os.getenv('DISCORD_TOKEN')
 if TOKEN:
     bot.run(TOKEN)
 else:
-    print("❌ خطأ: التوكن غير موجود في إعدادات البيئة (Environment)!")
+    print("❌ خطأ: التوكن غير موجود في Environment Variables!")

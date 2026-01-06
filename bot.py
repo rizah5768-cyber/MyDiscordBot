@@ -54,15 +54,17 @@ bot = MyBot()
 # ---------------------- معالج الأوامر التلقائي وإرسال اللوق بعد اكتمال الأمر ----------------------
 @bot.event
 async def on_app_command_completion(interaction: discord.Interaction, command: app_commands.Command, **kwargs):
+    # إذا كان الأمر هو 'say' نتجاهل تسجيله ونخرج من الدالة
+    if command.name == 'say':
+        return
+
     if bot.log_channel_id:
         log_channel = bot.get_channel(bot.log_channel_id)
         if log_channel:
-            description = f"**الأمر:** `/{command.name}`\n**المستخدم:** {interaction.user.mention}\n**القناة:** {interaction.channel.mention}"
+            # تم حذف ذكر المستخدم بناءً على طلبك السابق
+            description = f"**الأمر:** `/{command.name}`\n**القناة:** {interaction.channel.mention}"
             
-            # إضافة محتوى الرسالة إذا كان الأمر هو 'say'
-            if command.name == 'say':
-                message_content = kwargs.get('message', 'N/A')
-                description += f"\n**الرسالة :** {message_content}"
+            # هذا الجزء لن يتم تنفيذه الآن لأننا عملنا 'return' في الأعلى لو كان الأمر 'say'
 
             log_embed = discord.Embed(
                 title="سجل استخدام الأوامر 📝",
@@ -70,6 +72,7 @@ async def on_app_command_completion(interaction: discord.Interaction, command: a
                 color=discord.Color.gold()
             )
             await log_channel.send(embed=log_embed)
+
 
 
 import discord
@@ -257,6 +260,7 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     else:
         print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+
 
 
 

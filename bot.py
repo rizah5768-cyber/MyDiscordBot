@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import os
-from keep_alive import keep_alive  # استدعاء ملف البقاء حياً
+from keep_alive import keep_alive 
 
 # ---------------------- إعدادات البوت ----------------------
 intents = discord.Intents.default()
@@ -14,13 +14,12 @@ class MyBot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents)
 
     async def setup_hook(self):
-        # مزامنة الأوامر مع ديسكورد
         await self.tree.sync()
-        print(f"✅ تم تحديث أوامر السلاش!")
+        print(f"✅ تم تحديث جميع الأوامر بما فيها كشف الرتب!")
 
 bot = MyBot()
 
-# ---------------------- أوامر السلاش الذكية ----------------------
+# ---------------------- أوامر السلاش ----------------------
 
 @bot.tree.command(name="say", description="إرسال رسالة منسقة عبر البوت")
 async def say(interaction: discord.Interaction, message: str):
@@ -29,40 +28,55 @@ async def say(interaction: discord.Interaction, message: str):
     await interaction.response.send_message(embed=embed)
 
 @bot.tree.command(name="اعطاء-رتبة", description="إعطاء رتبة لعضو (اختر من القائمة)")
-@app_commands.describe(member="العضو المستهدف", role="اختر الرتبة من القائمة")
+@app_commands.describe(member="العضو المستهدف", role="اختر الرتبة")
 async def give_role(interaction: discord.Interaction, member: discord.Member, role: discord.Role):
     if not interaction.user.guild_permissions.manage_roles:
         return await interaction.response.send_message("❌ ليس لديك صلاحية إدارة الرتب", ephemeral=True)
-    
     try:
         await member.add_roles(role)
-        embed = discord.Embed(title="✅ تم منح الرتبة", color=discord.Color.green())
-        embed.add_field(name="العضو:", value=member.mention)
-        embed.add_field(name="الرتبة:", value=role.mention)
-        await interaction.response.send_message(embed=embed)
-    except discord.Forbidden:
-        await interaction.response.send_message("❌ فشل: رتبة البوت أدنى من الرتبة المطلوبة أو تنقصه صلاحيات.", ephemeral=True)
+        await interaction.response.send_message(f"✅ تم إعطاء رتبة {role.mention} للعضو {member.mention}")
+    except:
+        await interaction.response.send_message("❌ فشل: تأكد أن رتبة البوت أعلى من الرتبة المطلوبة.")
 
 @bot.tree.command(name="ازالة-رتبة", description="إزالة رتبة من عضو (اختر من القائمة)")
-@app_commands.describe(member="العضو المستهدف", role="اختر الرتبة من القائمة")
+@app_commands.describe(member="العضو المستهدف", role="اختر الرتبة")
 async def remove_role(interaction: discord.Interaction, member: discord.Member, role: discord.Role):
     if not interaction.user.guild_permissions.manage_roles:
         return await interaction.response.send_message("❌ ليس لديك صلاحية إدارة الرتب", ephemeral=True)
-
     try:
         await member.remove_roles(role)
-        embed = discord.Embed(title="🗑️ تم إزالة الرتبة", color=discord.Color.red())
-        embed.add_field(name="العضو:", value=member.mention)
-        embed.add_field(name="الرتبة:", value=role.mention)
-        await interaction.response.send_message(embed=embed)
-    except discord.Forbidden:
-        await interaction.response.send_message("❌ فشل: رتبة البوت أدنى من الرتبة المطلوبة.", ephemeral=True)
+        await interaction.response.send_message(f"🗑️ تم إزالة رتبة {role.mention} من العضو {member.mention}")
+    except:
+        await interaction.response.send_message("❌ فشل: تأكد أن رتبة البوت أعلى من الرتبة المطلوبة.")
+
+@bot.tree.command(name="كشف-رتبة", description="يظهر قائمة بأسماء الأعضاء الذين لديهم هذه الرتبة")
+@app_commands.describe(role="اختر الرتبة المراد كشف أعضائها")
+async def list_role_members(interaction: discord.Interaction, role: discord.Role):
+    await interaction.response.defer() # للتعامل مع الرتب التي بها أعضاء كثر
+    
+    members = role.members
+    if not members:
+        return await interaction.followup.send(f"⚠️ لا يوجد أعضاء يحملون رتبة {role.mention}")
+
+    # تنسيق القائمة
+    member_list = "\n".join([f"• {m.mention} ({m.name})" for m in members[:20]]) # عرض أول 20 عضو لتجنب طول الرسالة
+    if len(members) > 20:
+        member_list += f"\n\n... وغيرها {len(members) - 20} عضواً"
+
+    embed = discord.Embed(
+        title=f"قائمة أعضاء رتبة: {role.name}",
+        description=member_list,
+        color=role.color
+    )
+    embed.set_footer(text=f"إجمالي الأعضاء: {len(members)}")
+    
+    await interaction.followup.send(embed=embed)
 
 # ---------------------- التشغيل ----------------------
-keep_alive() # تشغيل السيرفر الوهمي لمنع الإغلاق في Render
+keep_alive()
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 if TOKEN:
     bot.run(TOKEN)
 else:
-    print("❌ خطأ: التوكن غير موجود في Environment Variables!")
+    print("❌ التوكن مفقود!")

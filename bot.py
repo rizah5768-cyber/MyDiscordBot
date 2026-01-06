@@ -4,6 +4,7 @@ from discord.ext import commands
 import os
 from flask import Flask
 from threading import Thread
+from typing import Optional
 
 # ---------------------- نظام البقاء حياً (Flask) لـ Render ----------------------
 # هذا الجزء مهم جداً لمنصة Render لكي لا يتوقف البوت
@@ -48,7 +49,6 @@ class MyBot(commands.Bot):
                         print(f"تم العثور على قناة اللوق: {channel.name}")
                         break
                 if self.log_channel_id: break
-
         print(f'--- {self.user.name} يعمل الآن ---')
 
 bot = MyBot()
@@ -73,38 +73,6 @@ async def on_interaction(interaction: discord.Interaction):
     await bot.process_application_commands(interaction)
 
 
-# ---------------------- دالة معالجة الرتب المجمعة (تستخدم في الإعطاء والإزالة) ----------------------
-async def process_multi_roles(interaction, member, roles_input, action_type):
-    role_names = [r.strip() for r in roles_input.split(',')]
-    if len(role_names) > 10:
-        return await interaction.response.send_message("❌ لا يمكنك معالجة أكثر من 10 رتب في المرة الواحدة.", ephemeral=True)
-
-    await interaction.response.defer()
-    success, failed = [], []
-    color = discord.Color.green() if action_type == "add" else discord.Color.red()
-
-    for name in role_names:
-        role = discord.utils.get(interaction.guild.roles, name=name) or \
-               (discord.utils.get(interaction.guild.roles, id=int(name.strip('<@&>')) if name.strip('<@&>').isdigit() else 0))
-        if role:
-            try:
-                if action_type == "add": await member.add_roles(role)
-                else: await member.remove_roles(role)
-                success.append(f"✅ {role.name}")
-            except: failed.append(f"❌ {name} (نقص صلاحيات)")
-        else: failed.append(f"❌ {name} (غير موجودة)")
-
-    embed = discord.Embed(title="نموذج إدارة الرتب المجمعة", color=color)
-    embed.add_field(name="العضو المستهدف:", value=member.mention, inline=False)
-    if success:
-        label = "تم إعطاء الرتب التالية:" if action_type == "add" else "تم إزالة الرتب التالية:"
-        embed.add_field(name=label, value="\n".join(success), inline=False)
-    if failed:
-        embed.add_field(name="فشل في الرتب التالية:", value="\n".join(failed), inline=False)
-    
-    await interaction.followup.send(embed=embed)
-
-
 # ---------------------- أوامر السلاش (Slash Commands) ----------------------
 
 @bot.tree.command(name="say", description="إرسال رسالة منسقة عبر البوت (مجهول)")
@@ -113,19 +81,77 @@ async def say(interaction: discord.Interaction, message: str):
     embed = discord.Embed(description=message, color=discord.Color.blue())
     await interaction.response.send_message(embed=embed)
 
-@bot.tree.command(name="اعطاء-رتب", description="إعطاء حتى 10 رتب دفعة واحدة (افصل بينهم بفاصلة)")
-@app_commands.describe(member="العضو المستهدف", roles="أسماء الرتب مفصولة بفاصلة (مثال: رتبة1, رتبة2)")
-async def give_roles(interaction: discord.Interaction, member: discord.Member, roles: str):
+@bot.tree.command(name="اعطاء-رتب", description="إعطاء حتى 10 رتب في حقول منفصلة")
+@app_commands.describe(
+    member="العضو المستهدف",
+    role1="الرتبة 1", role2="الرتبة 2", role3="الرتبة 3", role4="الرتبة 4", role5="الرتبة 5",
+    role6="الرتبة 6", role7="الرتبة 7", role8="الرتبة 8", role9="الرتبة 9", role10="الرتبة 10"
+)
+async def give_roles(
+    interaction: discord.Interaction,
+    member: discord.Member,
+    role1: discord.Role, role2: Optional[discord.Role] = None, role3: Optional[discord.Role] = None,
+    role4: Optional[discord.Role] = None, role5: Optional[discord.Role] = None, role6: Optional[discord.Role] = None,
+    role7: Optional[discord.Role] = None, role8: Optional[discord.Role] = None, role9: Optional[discord.Role] = None,
+    role10: Optional[discord.Role] = None
+):
     if not interaction.user.guild_permissions.manage_roles:
-        return await interaction.response.send_message("❌ لا تملك صلاحية إدارة الرتب", ephemeral=True)
-    await process_multi_roles(interaction, member, roles, "add")
+        return await interaction.response.send_message("❌ ليس لديك صلاحية إدارة الرتب", ephemeral=True)
+    
+    await interaction.response.defer()
+    roles_to_process = [role1, role2, role3, role4, role5, role6, role7, role8, role9, role10]
+    success, failed = [], []
 
-@bot.tree.command(name="ازالة-رتب", description="إزالة حتى 10 رتب دفعة واحدة (افصل بينهم بفاصلة)")
-@app_commands.describe(member="العضو المستهدف", roles="أسماء الرتب مفصولة بفاصلة (مثال: رتبة1, رتبة2)")
-async def remove_roles(interaction: discord.Interaction, member: discord.Member, roles: str):
+    for role in roles_to_process:
+        if role is None: continue
+        try:
+            await member.add_roles(role)
+            success.append(f"✅ {role.name}")
+        except:
+            failed.append(f"❌ {role.name} (نقص صلاحيات)")
+
+    embed = discord.Embed(title="نموذج اعطاء الرتب", color=discord.Color.green())
+    embed.add_field(name="العضو المستهدف:", value=member.mention, inline=False)
+    if success: embed.add_field(name="تم إعطاء الرتب التالية:", value="\n".join(success), inline=False)
+    if failed: embed.add_field(name="فشل في الرتب التالية:", value="\n".join(failed), inline=False)
+    await interaction.followup.send(embed=embed)
+
+
+@bot.tree.command(name="ازالة-رتب", description="إزالة حتى 10 رتب في حقول منفصلة")
+@app_commands.describe(
+    member="العضو المستهدف",
+    role1="الرتبة 1", role2="الرتبة 2", role3="الرتبة 3", role4="الرتبة 4", role5="الرتبة 5",
+    role6="الرتبة 6", role7="الرتبة 7", role8="الرتبة 8", role9="الرتبة 9", role10="الرتبة 10"
+)
+async def remove_roles(
+    interaction: discord.Interaction,
+    member: discord.Member,
+    role1: discord.Role, role2: Optional[discord.Role] = None, role3: Optional[discord.Role] = None,
+    role4: Optional[discord.Role] = None, role5: Optional[discord.Role] = None, role6: Optional[discord.Role] = None,
+    role7: Optional[discord.Role] = None, role8: Optional[discord.Role] = None, role9: Optional[discord.Role] = None,
+    role10: Optional[discord.Role] = None
+):
     if not interaction.user.guild_permissions.manage_roles:
-        return await interaction.response.send_message("❌ لا تملك صلاحية إدارة الرتب", ephemeral=True)
-    await process_multi_roles(interaction, member, roles, "remove")
+        return await interaction.response.send_message("❌ ليس لديك صلاحية إدارة الرتب", ephemeral=True)
+    
+    await interaction.response.defer()
+    roles_to_process = [role1, role2, role3, role4, role5, role6, role7, role8, role9, role10]
+    success, failed = [], []
+
+    for role in roles_to_process:
+        if role is None: continue
+        try:
+            await member.remove_roles(role)
+            success.append(f"✅ {role.name}")
+        except:
+            failed.append(f"❌ {role.name} (نقص صلاحيات)")
+
+    embed = discord.Embed(title="نموذج ازالة الرتب", color=discord.Color.red())
+    embed.add_field(name="العضو المستهدف:", value=member.mention, inline=False)
+    if success: embed.add_field(name="تم إزالة الرتب التالية:", value="\n".join(success), inline=False)
+    if failed: embed.add_field(name="فشل في الرتب التالية:", value="\n".join(failed), inline=False)
+    await interaction.followup.send(embed=embed)
+
 
 @bot.tree.command(name="كشف-رتبة", description="يظهر قائمة بأسماء الأعضاء الذين يحملون هذه الرتبة في نموذج كبير")
 @app_commands.describe(role="اختر الرتبة المراد كشف أعضائها")

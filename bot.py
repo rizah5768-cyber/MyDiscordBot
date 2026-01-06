@@ -182,6 +182,25 @@ async def list_role_members(interaction: discord.Interaction, role: discord.Role
     embed.set_footer(text=f"طلب بواسطة: {interaction.user.display_name}")
     
     await interaction.followup.send(embed=embed)
+----
+from flask import Flask
+from threading import Thread
+
+# 1. تعريف التطبيق
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "I am alive"
+
+# 2. دالة التشغيل
+def run():
+    app.run(host='0.0.0.0', port=10000)
+
+# 3. دالة الـ Ping
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
 
 # ---------------------- تشغيل البوت ----------------------
 if __name__ == "__main__":
@@ -192,4 +211,5 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     else:
         print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+
 

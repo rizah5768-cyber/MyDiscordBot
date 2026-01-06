@@ -54,10 +54,7 @@ async def process_roles(interaction, member, roles_input, action_type):
 @bot.tree.command(name="say", description="يجعل البوت يرسل رسالتك داخل نموذج منسق")
 @app_commands.describe(message="النص الذي تريد من البوت كتابته")
 async def say(interaction: discord.Interaction, message: str):
-    embed = discord.Embed(
-        description=message,
-        color=discord.Color.blue() 
-    )
+    embed = discord.Embed(description=message, color=discord.Color.blue())
     embed.set_footer(text=f"أرسل بواسطة: {interaction.user.display_name}", icon_url=interaction.user.display_avatar.url)
     await interaction.response.send_message(embed=embed)
 
@@ -75,24 +72,11 @@ async def remove_roles(interaction: discord.Interaction, member: discord.Member,
         return await interaction.response.send_message("❌ لا تملك صلاحية إدارة الرتب", ephemeral=True)
     await process_roles(interaction, member, roles, "remove")
 
-@bot.tree.command(name="كشف-رتب", description="عرض قائمة الأعضاء الذين يمتلكون رتبة معينة")
-@app_commands.describe(role="اختر الرتبة")
-async def check_role(interaction: discord.Interaction, role: discord.Role):
-    members = role.members
-    embed = discord.Embed(title=f"قائمة رتبة: {role.name}", color=role.color)
-    if not members:
-        embed.description = "⚠️ لا يوجد أحد يمتلك هذه الرتبة."
-    else:
-        mentions = [m.mention for m in members[:30]]
-        embed.add_field(name=f"العدد الإجمالي: {len(members)}", value="\n".join(mentions))
-    await interaction.response.send_message(embed=embed)
-
-# ---------------------- تشغيل البوت بشكل آمن ----------------------
-# (DISCORD_TOKEN) سيتم سحب التوكن من إعدادات رندر وليس من الكود
-# ملاحظة هامة: لا تضع التوكن الحقيقي هنا أبداً
+# ---------------------- التشغيل ----------------------
+# ملاحظة: هذا السطر هو الأهم لحماية التوكن
 TOKEN = os.getenv('DISCORD_TOKEN')
 
 if TOKEN:
     bot.run(TOKEN)
 else:
-    print("❌ خطأ: لم يتم العثور على التوكن في إعدادات Render!")
+    print("❌ خطأ: التوكن غير موجود في إعدادات البيئة (Environment)!")

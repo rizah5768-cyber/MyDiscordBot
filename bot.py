@@ -53,25 +53,25 @@ class MyBot(commands.Bot):
 
 bot = MyBot()
 
-# ---------------------- معالج الأوامر التلقائي وإرسال اللوق ----------------------
+# ---------------------- معالج الأوامر التلقائي وإرسال اللوق بعد اكتمال الأمر ----------------------
 @bot.event
-async def on_interaction(interaction: discord.Interaction):
-    # نتأكد أن التفاعل هو أمر سلاش
-    if interaction.type == discord.InteractionType.application_command:
-        # إذا وجدنا القناة، نرسل اللوق
-        if bot.log_channel_id:
-            log_channel = bot.get_channel(bot.log_channel_id)
-            if log_channel:
-                log_embed = discord.Embed(
-                    title="سجل استخدام الأوامر 📝",
-                    description=f"**الأمر:** `/{interaction.command.name}`\n**المستخدم:** {interaction.user.mention}\n**القناة:** {interaction.channel.mention}",
-                    color=discord.Color.gold()
-                )
-                await log_channel.send(embed=log_embed)
-        
-    # نضمن أن الأوامر الفعلية تشتغل
-    await bot.process_application_commands(interaction)
+async def on_app_command_completion(interaction: discord.Interaction, command: app_commands.Command, **kwargs):
+    if bot.log_channel_id:
+        log_channel = bot.get_channel(bot.log_channel_id)
+        if log_channel:
+            description = f"**الأمر:** `/{command.name}`\n**المستخدم:** {interaction.user.mention}\n**القناة:** {interaction.channel.mention}"
+            
+            # إضافة محتوى الرسالة إذا كان الأمر هو 'say'
+            if command.name == 'say':
+                message_content = kwargs.get('message', 'N/A')
+                description += f"\n**الرسالة :** {message_content}" # تم إضافة "الرسالة :" هنا
 
+            log_embed = discord.Embed(
+                title="سجل استخدام الأوامر 📝",
+                description=description,
+                color=discord.Color.gold()
+            )
+            await log_channel.send(embed=log_embed)
 
 # ---------------------- أوامر السلاش (Slash Commands) ----------------------
 

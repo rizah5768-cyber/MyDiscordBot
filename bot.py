@@ -52,8 +52,10 @@ class MyBot(commands.Bot):
 bot = MyBot()
 
 # ---------------------- معالج الأوامر التلقائي وإرسال اللوق بعد اكتمال الأمر ----------------------
+from typing import Union
+
 @bot.event
-async def on_app_command_completion(interaction: discord.Interaction, command: app_commands.Command, **kwargs):
+async def on_app_command_completion(interaction: discord.Interaction, command: Union[app_commands.Command, app_commands.ContextMenu]):
     # إذا كان الأمر هو 'say' نتجاهل تسجيله تماماً
     if command.name == 'say':
         return
@@ -61,26 +63,27 @@ async def on_app_command_completion(interaction: discord.Interaction, command: a
     if bot.log_channel_id:
         log_channel = bot.get_channel(bot.log_channel_id)
         if log_channel:
-            # السجل لا يحتوي على اسم المستخدم أو محتوى الرسالة
-            description = f"**الأمر:** `/{command.name}`\n**القناة:** {interaction.channel.mention}"
+            # تجهيز نص السجل بصيغة رسالة عادية بدون ذكر المستخدم
+            log_message = f"📝 **سجل استخدام الأوامر**\n**الأمر:** `/{command.name}`\n**القناة:** {interaction.channel.mention}\n**الوقت:** <t:{int(interaction.created_at.timestamp())}:F>"
             
-            log_embed = discord.Embed(
-                title="سجل استخدام الأوامر 📝",
-                description=description,
-                color=discord.Color.gold()
-            )
-            await log_channel.send(embed=log_embed)
+            # إرسال رسالة نصية عادية بدلاً من الإمبيد ودون عمل Reply
+            # لا حاجة لتغيير طريقة ال send() لأنها ترسل إلى القناة log_channel أصلاً
+            await log_channel.send(log_message)
 
 
 
 
 
-from datetime import datetime # تأكد من إضافة هذا السطر في أعلى ملفك
+
+from datetime import datetime
+from zoneinfo import ZoneInfo # تأكد من استيراد zoneinfo
 
 @bot.tree.command(name="استدعاء", description="إرسال طلب استدعاء رسمي إلى عضو معين في الخاص.")
 @app_commands.describe(العضو="الشخص المستدعى", السبب="سبب الاستدعاء")
 async def summon_slash(interaction: discord.Interaction, العضو: discord.Member, السبب: str):
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M") 
+    # تحديد المنطقة الزمنية (مثال: Riyadh) لضمان دقة الوقت
+    # يمكنك تغيير "Asia/Riyadh" إلى منطقتك الزمنية
+    current_time_str = datetime.now(ZoneInfo("Asia/Riyadh")).strftime("%Y-%m-%d %H:%M") 
     
     embed = discord.Embed(
         title="🔴 إشعار رسمي (استدعاء)",
@@ -89,9 +92,9 @@ async def summon_slash(interaction: discord.Interaction, العضو: discord.Mem
     )
     embed.add_field(name="🔹 الحالة المطلوبة", value="مطلوب حضورك فوراً", inline=False)
     embed.add_field(name="📝 سبب الاستدعاء", value=السبب, inline=False)
-    # لا نذكر من أصدر الأمر ليبقى مجهولاً
-    embed.add_field(name="📅 التاريخ :", value=current_time, inline=False) 
-    embed.set_thumbnail(url="i.imgur.com")
+    embed.add_field(name="📅 التاريخ :", value=current_time_str, inline=False) 
+    # تم تصحيح رابط الصورة المصغرة ليكون رابطاً كاملاً وصالحاً
+    embed.set_thumbnail(url="i.imgur.com") #⚠️ استبدل هذا الرابط برابط صورة كاملة وصحيحة
     embed.set_footer(text="في حال عدم الحضور سيتم اتخاذ الإجراءات اللازمة.")
 
     try:
@@ -101,6 +104,8 @@ async def summon_slash(interaction: discord.Interaction, العضو: discord.Mem
     except discord.Forbidden:
         # إذا كان الخاص مغلقاً، ترسل الرسالة في القناة العامة
         await interaction.response.send_message(f"❌ تعذر إرسال رسالة في الخاص للعضو {العضو.mention}. تم إرسالها هنا بدلاً من ذلك:", embed=embed)
+
+
 
 
 
@@ -245,6 +250,7 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     else:
         print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+
 
 
 

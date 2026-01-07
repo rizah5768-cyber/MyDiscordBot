@@ -83,6 +83,13 @@ async def on_app_command_completion(interaction: discord.Interaction, command: U
 
 
 
+
+
+
+
+
+
+# ---------------------- أوامر السلاش (Slash Commands) ----------------------
 from datetime import datetime
 # تأكد من إضافة zoneinfo في الأعلى إذا كنت تستخدم التوقيت المحلي
 # من zoneinfo import ZoneInfo 
@@ -113,12 +120,6 @@ async def summon_slash(interaction: discord.Interaction, العضو: discord.Mem
         # إذا كان الخاص مغلقاً
         await interaction.response.send_message(f"❌ تعذر إرسال رسالة في الخاص للعضو {العضو.mention}. تم إرسالها هنا بدلاً من ذلك:", embed=embed)
 
-
-
-
-
-
-# ---------------------- أوامر السلاش (Slash Commands) ----------------------
 
 from typing import Union
 # تأكد من استيراد discord و app_commands في بداية ملفك
@@ -266,6 +267,7 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     else:
         print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+
 
 
 

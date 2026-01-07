@@ -76,13 +76,15 @@ async def on_app_command_completion(interaction: discord.Interaction, command: U
 
 
 from datetime import datetime
-from zoneinfo import ZoneInfo # تأكد من استيراد zoneinfo
+# تأكد من إضافة zoneinfo في الأعلى إذا كنت تستخدم التوقيت المحلي
+# من zoneinfo import ZoneInfo 
 
 @bot.tree.command(name="استدعاء", description="إرسال طلب استدعاء رسمي إلى عضو معين في الخاص.")
 @app_commands.describe(العضو="الشخص المستدعى", السبب="سبب الاستدعاء")
 async def summon_slash(interaction: discord.Interaction, العضو: discord.Member, السبب: str):
-    # تحديد المنطقة الزمنية (مثال: Riyadh) لضمان دقة الوقت
-    current_time_str = datetime.now(ZoneInfo("Asia/Riyadh")).strftime("%Y-%m-%d %H:%M") 
+    # استخدام التوقيت الحالي لضمان الدقة
+    # إذا كنت تريد توقيتاً عالمياً موحداً (UTC)، استخدم datetime.utcnow().strftime(...)
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M") 
     
     embed = discord.Embed(
         title="🔴 إشعار رسمي (استدعاء)",
@@ -92,16 +94,18 @@ async def summon_slash(interaction: discord.Interaction, العضو: discord.Mem
     embed.add_field(name="🔹 الحالة المطلوبة", value="مطلوب حضورك فوراً", inline=False)
     embed.add_field(name="📝 سبب الاستدعاء", value=السبب, inline=False)
     embed.add_field(name="📅 التاريخ :", value=current_time_str, inline=False) 
-    # ⚠️ CRITICAL FIX: يجب استبدال هذا الرابط برابط صورة كاملة وصحيحة تبدأ بـ https://
-    # الرابط i.imgur.com الذي استخدمته كان خاطئاً ويسبب العطل
-    embed.set_thumbnail(url="i.imgur.com") # مثال لرابط صحيح
+    # تم حذف سطر embed.set_thumbnail(...) لحل مشكلة الرابط
     embed.set_footer(text="في حال عدم الحضور سيتم اتخاذ الإجراءات اللازمة.")
 
     try:
         await العضو.send(embed=embed)
+        # تأكيد إرسال الرسالة في القناة الأصلية برسالة مخفية
         await interaction.response.send_message(f"✅ تم إرسال رسالة الاستدعاء إلى {العضو.mention} في الخاص.", ephemeral=True)
     except discord.Forbidden:
+        # إذا كان الخاص مغلقاً
         await interaction.response.send_message(f"❌ تعذر إرسال رسالة في الخاص للعضو {العضو.mention}. تم إرسالها هنا بدلاً من ذلك:", embed=embed)
+
+
 
 
 
@@ -246,6 +250,7 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     else:
         print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+
 
 
 

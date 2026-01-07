@@ -21,37 +21,68 @@ def keep_alive():
     t = Thread(target=run_flask)
     t.start()
 
-# ---------------------- إعدادات البوت ----------------------
+# ---------------------- إعدادات البوت واللوق ----------------------
 intents = discord.Intents.default()
-intents.members = True
-intents.message_content = True
+intents.members = True # يتطلب تمكين Members Intent في بوابة المطورين بـ Discord
+intents.message_content = True # يتطلب تمكين Message Content Intent
 
 class MyBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents)
-        self.log_channel_id = None # لتخزين آيدي قناة اللوق
+        # متغير لتخزين آيدي قناة اللوق عند العثور عليه
+        self.log_channel_id = None 
 
     async def setup_hook(self):
-        # مزامنة أوامر السلاش فوراً عند التشغيل
+        # مزامنة أوامر السلاش (يمكنك ترك هذا أو إزالته حسب حاجتك لمزامنة الأوامر الأخرى)
         await self.tree.sync()
         print(f"✅ تم تحديث ومزامنة جميع الأوامر بنجاح!")
     
     async def on_ready(self):
         # البحث عن قناة اللوق بالاسم عند تشغيل البوت
         if self.log_channel_id is None:
-            for guild in self.guilds:
-                for channel in guild.channels:
-                    # يفضل استخدام الـ ID بدلاً من الاسم لضمان الموثوقية
-                    if channel.name == "ʳⁱʸᵃᵈʰ・ᵗᵒʷⁿ｜🛠️」لـوق・اونـر":
-                        self.log_channel_id = channel.id
-                        print(f"تم العثور على قناة اللوق: {channel.name}")
-                        break
-                if self.log_channel_id: break
+            # يفضل استخدام الـ ID مباشرة هنا لضمان الموثوقية التامة
+            LOG_CHANNEL_HARDCODED_ID = 0 # استبدل 0 بالـ ID الفعلي لقناتك إذا أردت
+            
+            if LOG_CHANNEL_HARDCODED_ID != 0:
+                self.log_channel_id = LOG_CHANNEL_HARDCODED_ID
+            else:
+                # البحث بالاسم كخيار احتياطي (أقل موثوقية)
+                target_channel_name = "ʳⁱʸᵃᵈʰ・ᵗᵒʷⁿ｜🛠️」لـوق・اونـر"
+                for guild in self.guilds:
+                    for channel in guild.channels:
+                        if channel.name == target_channel_name:
+                            self.log_channel_id = channel.id
+                            print(f"تم العثور على قناة اللوق: {channel.name}")
+                            break
+                    if self.log_channel_id: break
+        
+        if self.log_channel_id:
+             print(f"قناة اللوق المستخدمة ID: {self.log_channel_id}")
+        else:
+             print("❌ لم يتم العثور على قناة اللوق. لن تعمل وظيفة اللوق.")
+
         print(f'--- {self.user.name} يعمل الآن ---')
 
+# إنشاء مثيل البوت
 bot = MyBot()
 
-
+# دالة مساعدة يمكنك استدعاءها ضمن أوامرك لإرسال اللوق
+async def send_log(title: str, description: str, interaction: discord.Interaction, color: discord.Color):
+    # الوصول إلى الـ ID المخزن في مثيل البوت
+    if bot.log_channel_id: 
+        log_channel = bot.get_channel(bot.log_channel_id)
+        if log_channel:
+            log_embed = discord.Embed(
+                title=title,
+                description=description,
+                color=color,
+                timestamp=interaction.created_at
+            )
+            log_embed.add_field(name="المنفذ (المسؤول)", value=interaction.user.mention, inline=False)
+            try:
+                await log_channel.send(embed=log_embed)
+            except discord.Forbidden:
+                print(f"❌ لا يمكن إرسال رسالة في قناة اللوق {log_channel.name}")
 
 
 
@@ -269,6 +300,7 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     else:
         print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+
 
 
 

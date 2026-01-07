@@ -91,53 +91,94 @@ async def on_app_command_completion(interaction: discord.Interaction, command: U
 
 # ---------------------- أوامر السلاش (Slash Commands) ----------------------
 from datetime import datetime
-# تأكد من إضافة zoneinfo في الأعلى إذا كنت تستخدم التوقيت المحلي
-# من zoneinfo import ZoneInfo 
+from typing import Optional # تأكد من استيراد Optional
+
+# تأكد من تعريف LOG_CHANNEL_ID كمعرف افتراضي في مكان ما (مثلاً 1453056359506509847)
 
 @bot.tree.command(name="استدعاء", description="إرسال طلب استدعاء رسمي إلى عضو معين في الخاص.")
-@app_commands.describe(العضو="الشخص المستدعى", السبب="سبب الاستدعاء")
-async def summon_slash(interaction: discord.Interaction, العضو: discord.Member, السبب: str):
-    # استخدام التوقيت الحالي لضمان الدقة
-    # إذا كنت تريد توقيتاً عالمياً موحداً (UTC)، استخدم datetime.utcnow().strftime(...)
+@app_commands.describe(
+    العضو="الشخص المستدعى", 
+    السبب="سبب الاستدعاء", 
+    قناة_اللوق="القناة التي تريد إرسال سجل الأمر إليها (اختياري)"
+)
+async def summon_slash(
+    interaction: discord.Interaction, 
+    العضو: discord.Member, 
+    السبب: str, 
+    قناة_اللوق: Optional[discord.TextChannel] = None
+):
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M") 
     
-    embed = discord.Embed(
+    # 1. إنشاء نموذج الرسالة الخاصة (DM Embed)
+    dm_embed = discord.Embed(
         title="🔴 إشعار رسمي (استدعاء)",
         description=f"تم استدعاؤك من قبل الإدارة بموجب هذا الإشعار.",
         color=0x992d22
     )
-    embed.add_field(name="🔹 الحالة المطلوبة", value="مطلوب حضورك فوراً", inline=False)
-    embed.add_field(name="📝 سبب الاستدعاء", value=السبب, inline=False)
-    embed.add_field(name="📅 التاريخ :", value=current_time_str, inline=False) 
-    # تم حذف سطر embed.set_thumbnail(...) لحل مشكلة الرابط
-    embed.set_footer(text="في حال عدم الحضور سيتم اتخاذ الإجراءات اللازمة.")
+    dm_embed.add_field(name="📝 سبب الاستدعاء", value=السبب, inline=False)
+    dm_embed.add_field(name="المستدعي (المسؤول)", value=interaction.user.mention, inline=False) 
+    dm_embed.set_footer(text="في حال عدم الحضور سيتم اتخاذ الإجراءات اللازمة.")
 
+    # 2. محاولة إرسال الرسالة الخاصة
     try:
-        await العضو.send(embed=embed)
-        # تأكيد إرسال الرسالة في القناة الأصلية برسالة مخفية
+        await العضو.send(embed=dm_embed)
         await interaction.response.send_message(f"✅ تم إرسال رسالة الاستدعاء إلى {العضو.mention} في الخاص.", ephemeral=True)
     except discord.Forbidden:
-        # إذا كان الخاص مغلقاً
-        await interaction.response.send_message(f"❌ تعذر إرسال رسالة في الخاص للعضو {العضو.mention}. تم إرسالها هنا بدلاً من ذلك:", embed=embed)
+        await interaction.response.send_message(f"❌ تعذر إرسال رسالة في الخاص للعضو {العضو.mention}. تم إرسالها في القناة بدلاً من ذلك.", embed=dm_embed)
+
+    # 3. تحديد قناة السجل الديناميكية وإرسال اللوق (Log)
+    # إذا حدد المستخدم قناة، استخدمها. إذا لم يحدد، نستخدم قناة اللوق الافتراضية إذا كانت معرفة.
+    log_destination = قناة_اللوق or (bot.get_channel(LOG_CHANNEL_ID) if 'LOG_CHANNEL_ID' in globals() else None)
+    
+    if log_destination:
+        log_embed = discord.Embed(
+            title="📞 سجل أمر استدعاء",
+            description=f"قام {interaction.user.mention} باستدعاء {العضو.mention}.",
+            color=discord.Color.red(),
+            timestamp=interaction.created_at
+        )
+        log_embed.add_field(name="السبب المعلن", value=السبب, inline=False)
+        log_embed.add_field(name="تم الإرسال إلى القناة", value=log_destination.mention, inline=False)
+
+        # محاولة إرسال اللوق
+        try:
+            await log_destination.send(embed=log_embed)
+        except discord.Forbidden:
+            # إذا لم يستطع البوت الإرسال للقناة المحددة ديناميكياً
+            print(f"Error: Bot cannot send log message to {log_destination.name} due to permissions.")
 
 
-from typing import Union
-# تأكد من استيراد discord و app_commands في بداية ملفك
 
-@bot.event
-async def on_app_command_completion(interaction: discord.Interaction, command: Union[app_commands.Command, app_commands.ContextMenu]):
-    # إذا كان الأمر هو 'say' نتجاهل تسجيله تماماً
-    if command.name == 'say':
-        return
 
-    if bot.log_channel_id:
-        log_channel = bot.get_channel(bot.log_channel_id)
-        if log_channel:
-            # هذا السطر هو رسالة نصية عادية 100% ولا يستخدم Embed
-            log_message = f"📝 **سجل استخدام الأوامر**\n**الأمر:** `/{command.name}`\n**القناة:** {interaction.channel.mention}\n**الوقت:** <t:{int(interaction.created_at.timestamp())}:F>"
-            
-            # إرسال رسالة نصية عادية باستخدام send()
-            await log_channel.send(log_message)
+import discord
+from discord import app_commands
+# تأكد من استيراد bot كـ commands.Bot
+
+# افترض أن لديك LOG_CHANNEL_ID معرف مسبقاً إذا كنت تريد وظيفة اللوق
+# LOG_CHANNEL_ID = 1453056359506509847 
+
+@bot.tree.command(name="say", description="إرسال رسالة من البوت (مجهول) إلى القناة الحالية أو قناة أخرى.")
+@app_commands.describe(المحتوى="الرسالة المراد إرسالها", القناة="القناة الهدف (اختياري)")
+async def say_slash(interaction: discord.Interaction, المحتوى: str, القناة: Optional[discord.TextChannel] = None):
+    target_channel = القناة or interaction.channel
+    
+    # إرسال الرسالة كنص عادي تماماً
+    await target_channel.send(المحتوى)
+
+    # الرد على المستخدم برسالة مخفية (ephemeral=True) لتجنب ظهور أي شيء في القناة العامة
+    await interaction.response.send_message("✅ تم إرسال رسالتك بنجاح.", ephemeral=True)
+
+    # (اختياري) كود اللوق الذي يرسل إمبيد إلى قناة السجل الخاصة بك:
+    if 'LOG_CHANNEL_ID' in globals() and bot.get_channel(LOG_CHANNEL_ID):
+        log_channel = bot.get_channel(LOG_CHANNEL_ID)
+        embed = discord.Embed(
+            title="📝 سجل أمر Say (مجهول)",
+            description=f"الأمر `/{interaction.command.name}` استخدم في {interaction.channel.mention}.",
+            color=discord.Color.dark_grey(),
+            timestamp=interaction.created_at
+        )
+        embed.add_field(name="الرسالة المرسلة", value=f"```\n{المحتوى}\n```", inline=False)
+        await log_channel.send(embed=embed)
 
 
 @bot.tree.command(name="اعطاء-رتب", description="إعطاء حتى 10 رتب في حقول منفصلة")
@@ -267,6 +308,7 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     else:
         print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+
 
 
 

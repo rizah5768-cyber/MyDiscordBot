@@ -58,7 +58,12 @@ bot = MyBot()
 # ---------------------- أوامر السلاش (Slash Commands) ----------------------
 from datetime import datetime
 from typing import Optional 
-# تأكد من استيراد discord.TextChannel و discord.Role إذا كنت تستخدمهم في أماكن أخرى
+import discord
+from discord import app_commands
+# تأكد من استيراد bot كـ commands.Bot ومعرّف القناة (LOG_CHANNEL_ID) إذا كنت تستخدمه عالمياً
+
+# افترض أن لديك LOG_CHANNEL_ID معرف مسبقاً إذا كنت تريد وظيفة اللوق
+# LOG_CHANNEL_ID = 1453056359506509847 
 
 @bot.tree.command(name="استدعاء", description="إرسال طلب استدعاء رسمي إلى عضو معين في الخاص.")
 @app_commands.describe(
@@ -71,7 +76,7 @@ async def summon_slash(
     interaction: discord.Interaction, 
     العضو: discord.Member, 
     السبب: str, 
-    مكان_الحضور: discord.TextChannel, # تم تغيير النوع إلى TextChannel لسهولة الإشارة
+    مكان_الحضور: discord.TextChannel,
     قناة_اللوق: Optional[discord.TextChannel] = None
 ):
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M") 
@@ -80,7 +85,7 @@ async def summon_slash(
     dm_embed = discord.Embed(
         title="🔴 إشعار رسمي (استدعاء)",
         description=f"**{العضو.mention}، تم استدعاؤك من قبل الإدارة بموجب هذا الإشعار.**",
-        color=0x992d22 
+        color=0x992d22 # اللون الأحمر الداكن
     )
 
     # ⚠️ هنا يتم وضع مكان الحضور (القناة المحددة عند إجراء الأمر) داخل الـ DM
@@ -113,26 +118,20 @@ async def summon_slash(
         try:
             await log_destination.send(embed=log_embed)
         except discord.Forbidden:
-            pass # فشل إرسال اللوق لا يوقف الأمر
-
-هل تود تغيير أي من **الألوان** أو **الصياغة** في هذا النموذج الجديد؟
+            pass
 
 
 
 import discord
 from discord import app_commands
-# تأكد من استيراد bot كـ commands.Bot
+# تم إزالة Optional لأننا لا نستخدمه هنا بعد الآن
 
-# افترض أن لديك LOG_CHANNEL_ID معرف مسبقاً إذا كنت تريد وظيفة اللوق
-# LOG_CHANNEL_ID = 1453056359506509847 
+# تأكد من استيراد bot كـ commands.Bot في بداية ملفك
 
-from typing import Optional
-# تأكد من استيراد discord و app_commands في بداية ملفك
-
-@bot.tree.command(name="say", description="إرسال رسالة من البوت (مجهول) إلى القناة الحالية أو قناة أخرى.")
-@app_commands.describe(المحتوى="الرسالة المراد إرسالها", القناة="القناة الهدف (اختياري)")
-async def say_slash(interaction: discord.Interaction, المحتوى: str, القناة: Optional[discord.TextChannel] = None):
-    target_channel = القناة or interaction.channel
+@bot.tree.command(name="say", description="إرسال رسالة من البوت (مجهول) إلى القناة الحالية.")
+@app_commands.describe(المحتوى="الرسالة المراد إرسالها")
+async def say_slash(interaction: discord.Interaction, المحتوى: str):
+    target_channel = interaction.channel # القناة الافتراضية هي القناة الحالية
     
     # إرسال الرسالة كنص عادي تماماً إلى القناة المستهدفة
     await target_channel.send(المحتوى)
@@ -141,6 +140,7 @@ async def say_slash(interaction: discord.Interaction, المحتوى: str, ال�
     await interaction.response.send_message("✅ تم إرسال رسالتك بنجاح.", ephemeral=True)
 
     # *** تم إزالة كامل قسم اللوق من هنا ***
+
 
 @bot.tree.command(name="اعطاء-رتب", description="إعطاء حتى 10 رتب في حقول منفصلة")
 @app_commands.describe(
@@ -269,6 +269,7 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     else:
         print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+
 
 
 

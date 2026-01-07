@@ -53,7 +53,9 @@ bot = MyBot()
 
 # ---------------------- معالج الأوامر التلقائي وإرسال اللوق بعد اكتمال الأمر ----------------------
 from typing import Union
-# تأكد من استيراد discord و app_commands في بداية ملفك
+from datetime import datetime
+# تأكد من استيراد zoneinfo إذا كنت تريد توقيت محلي دقيق
+# from zoneinfo import ZoneInfo 
 
 @bot.event
 async def on_app_command_completion(interaction: discord.Interaction, command: Union[app_commands.Command, app_commands.ContextMenu]):
@@ -64,12 +66,17 @@ async def on_app_command_completion(interaction: discord.Interaction, command: U
     if bot.log_channel_id:
         log_channel = bot.get_channel(bot.log_channel_id)
         if log_channel:
-            # تجهيز نص السجل بصيغة رسالة عادية وبدون ذكر المستخدم
-            # استخدمنا صيغة الوقت <t:...:F> لتبدو مرتبة في ديسكورد
-            log_message = f"📝 **سجل استخدام الأوامر**\n**الأمر:** `/{command.name}`\n**القناة:** {interaction.channel.mention}\n**الوقت:** <t:{int(interaction.created_at.timestamp())}:F>"
+            # تجهيز نص السجل في ديسكربشن الإمبيد
+            description = f"**الأمر:** `/{command.name}`\n**القناة:** {interaction.channel.mention}"
             
-            # إرسال رسالة نصية عادية (ليست Embed)
-            await log_channel.send(log_message)
+            log_embed = discord.Embed(
+                title="سجل استخدام الأوامر 📝",
+                description=description,
+                color=discord.Color.gold(), # لون ذهبي جميل
+                timestamp=interaction.created_at # إضافة وقت التنفيذ تلقائياً
+            )
+            # إرسال الإمبيد في قناة اللوق المحددة
+            await log_channel.send(embed=log_embed)
 
 
 
@@ -113,16 +120,24 @@ async def summon_slash(interaction: discord.Interaction, العضو: discord.Mem
 
 # ---------------------- أوامر السلاش (Slash Commands) ----------------------
 
-@bot.tree.command(name="say", description="إرسال رسالة منسقة عبر البوت (مجهول)")
-@app_commands.describe(message="النص الذي تريد من البوت كتابته")
-async def say(interaction: discord.Interaction, message: str):
-    # تم تكبير النموذج وإضافة عنوان ووصف ليكون أجمل
-    embed = discord.Embed(
-        title="📣 رسالة عامة",
-        description=f"```\n{message}\n```", # وضع الرسالة داخل Code Block لترتيبها
-        color=discord.Color.blue()
-    )
-    await interaction.response.send_message(embed=embed)
+from typing import Union
+# تأكد من استيراد discord و app_commands في بداية ملفك
+
+@bot.event
+async def on_app_command_completion(interaction: discord.Interaction, command: Union[app_commands.Command, app_commands.ContextMenu]):
+    # إذا كان الأمر هو 'say' نتجاهل تسجيله تماماً
+    if command.name == 'say':
+        return
+
+    if bot.log_channel_id:
+        log_channel = bot.get_channel(bot.log_channel_id)
+        if log_channel:
+            # هذا السطر هو رسالة نصية عادية 100% ولا يستخدم Embed
+            log_message = f"📝 **سجل استخدام الأوامر**\n**الأمر:** `/{command.name}`\n**القناة:** {interaction.channel.mention}\n**الوقت:** <t:{int(interaction.created_at.timestamp())}:F>"
+            
+            # إرسال رسالة نصية عادية باستخدام send()
+            await log_channel.send(log_message)
+
 
 @bot.tree.command(name="اعطاء-رتب", description="إعطاء حتى 10 رتب في حقول منفصلة")
 @app_commands.describe(
@@ -251,6 +266,7 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     else:
         print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+
 
 
 

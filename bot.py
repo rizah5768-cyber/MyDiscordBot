@@ -53,6 +53,7 @@ bot = MyBot()
 
 # ---------------------- معالج الأوامر التلقائي وإرسال اللوق بعد اكتمال الأمر ----------------------
 from typing import Union
+# تأكد من استيراد discord و app_commands في بداية ملفك
 
 @bot.event
 async def on_app_command_completion(interaction: discord.Interaction, command: Union[app_commands.Command, app_commands.ContextMenu]):
@@ -63,11 +64,11 @@ async def on_app_command_completion(interaction: discord.Interaction, command: U
     if bot.log_channel_id:
         log_channel = bot.get_channel(bot.log_channel_id)
         if log_channel:
-            # تجهيز نص السجل بصيغة رسالة عادية بدون ذكر المستخدم
+            # تجهيز نص السجل بصيغة رسالة عادية وبدون ذكر المستخدم
+            # استخدمنا صيغة الوقت <t:...:F> لتبدو مرتبة في ديسكورد
             log_message = f"📝 **سجل استخدام الأوامر**\n**الأمر:** `/{command.name}`\n**القناة:** {interaction.channel.mention}\n**الوقت:** <t:{int(interaction.created_at.timestamp())}:F>"
             
-            # إرسال رسالة نصية عادية بدلاً من الإمبيد ودون عمل Reply
-            # لا حاجة لتغيير طريقة ال send() لأنها ترسل إلى القناة log_channel أصلاً
+            # إرسال رسالة نصية عادية (ليست Embed)
             await log_channel.send(log_message)
 
 
@@ -250,6 +251,7 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     else:
         print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+
 
 
 

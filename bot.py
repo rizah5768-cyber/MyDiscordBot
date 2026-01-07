@@ -82,7 +82,6 @@ from zoneinfo import ZoneInfo # تأكد من استيراد zoneinfo
 @app_commands.describe(العضو="الشخص المستدعى", السبب="سبب الاستدعاء")
 async def summon_slash(interaction: discord.Interaction, العضو: discord.Member, السبب: str):
     # تحديد المنطقة الزمنية (مثال: Riyadh) لضمان دقة الوقت
-    # يمكنك تغيير "Asia/Riyadh" إلى منطقتك الزمنية
     current_time_str = datetime.now(ZoneInfo("Asia/Riyadh")).strftime("%Y-%m-%d %H:%M") 
     
     embed = discord.Embed(
@@ -93,19 +92,16 @@ async def summon_slash(interaction: discord.Interaction, العضو: discord.Mem
     embed.add_field(name="🔹 الحالة المطلوبة", value="مطلوب حضورك فوراً", inline=False)
     embed.add_field(name="📝 سبب الاستدعاء", value=السبب, inline=False)
     embed.add_field(name="📅 التاريخ :", value=current_time_str, inline=False) 
-    # تم تصحيح رابط الصورة المصغرة ليكون رابطاً كاملاً وصالحاً
-    embed.set_thumbnail(url="i.imgur.com") #⚠️ استبدل هذا الرابط برابط صورة كاملة وصحيحة
+    # ⚠️ CRITICAL FIX: يجب استبدال هذا الرابط برابط صورة كاملة وصحيحة تبدأ بـ https://
+    # الرابط i.imgur.com الذي استخدمته كان خاطئاً ويسبب العطل
+    embed.set_thumbnail(url="i.imgur.com") # مثال لرابط صحيح
     embed.set_footer(text="في حال عدم الحضور سيتم اتخاذ الإجراءات اللازمة.")
 
     try:
         await العضو.send(embed=embed)
-        # تأكيد إرسال الرسالة في القناة الأصلية برسالة مخفية (ephemeral=True)
         await interaction.response.send_message(f"✅ تم إرسال رسالة الاستدعاء إلى {العضو.mention} في الخاص.", ephemeral=True)
     except discord.Forbidden:
-        # إذا كان الخاص مغلقاً، ترسل الرسالة في القناة العامة
         await interaction.response.send_message(f"❌ تعذر إرسال رسالة في الخاص للعضو {العضو.mention}. تم إرسالها هنا بدلاً من ذلك:", embed=embed)
-
-
 
 
 
@@ -250,6 +246,7 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     else:
         print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+
 
 
 

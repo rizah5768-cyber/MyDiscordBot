@@ -21,24 +21,27 @@ def keep_alive():
     t = Thread(target=run_flask)
     t.start()
 
+import discord
+from discord.ext import commands
+from discord import app_commands
+from datetime import datetime
+from typing import Optional
+
 # ---------------------- إعدادات البوت واللوق ----------------------
 intents = discord.Intents.default()
-intents.members = True # يتطلب تمكين Members Intent في بوابة المطورين بـ Discord
-intents.message_content = True # يتطلب تمكين Message Content Intent
+intents.members = True 
+intents.message_content = True 
 
 class MyBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents)
-        # متغير لتخزين آيدي قناة اللوق عند العثور عليه
         self.log_channel_id = None 
 
     async def setup_hook(self):
-        # مزامنة أوامر السلاش (يمكنك ترك هذا أو إزالته حسب حاجتك لمزامنة الأوامر الأخرى)
         await self.tree.sync()
         print(f"✅ تم تحديث ومزامنة جميع الأوامر بنجاح!")
     
     async def on_ready(self):
-        # البحث عن قناة اللوق بالاسم عند تشغيل البوت
         if self.log_channel_id is None:
             # يفضل استخدام الـ ID مباشرة هنا لضمان الموثوقية التامة
             LOG_CHANNEL_HARDCODED_ID = 0 # استبدل 0 بالـ ID الفعلي لقناتك إذا أردت
@@ -63,12 +66,11 @@ class MyBot(commands.Bot):
 
         print(f'--- {self.user.name} يعمل الآن ---')
 
-# إنشاء مثيل البوت
+# إنشاء مثيل البوت (يجب أن يكون متاحاً عالمياً للأوامر)
 bot = MyBot()
 
 # دالة مساعدة يمكنك استدعاءها ضمن أوامرك لإرسال اللوق
 async def send_log(title: str, description: str, interaction: discord.Interaction, color: discord.Color):
-    # الوصول إلى الـ ID المخزن في مثيل البوت
     if bot.log_channel_id: 
         log_channel = bot.get_channel(bot.log_channel_id)
         if log_channel:
@@ -86,71 +88,43 @@ async def send_log(title: str, description: str, interaction: discord.Interactio
 
 
 
-# ---------------------- أوامر السلاش (Slash Commands) ----------------------
-from datetime import datetime
-from typing import Optional 
-import discord
-from discord import app_commands
-# تأكد من استيراد bot كـ commands.Bot ومعرّف القناة (LOG_CHANNEL_ID) إذا كنت تستخدمه عالمياً
 
-# افترض أن لديك LOG_CHANNEL_ID معرف مسبقاً إذا كنت تريد وظيفة اللوق
-# LOG_CHANNEL_ID = 1453056359506509847 
+# ---------------------- أوامر السلاش (Slash Commands) ----------------------
+# تأكد من استيراد bot و send_log من الجزء الأول من الكود إذا كانا في ملف مختلف
 
 @bot.tree.command(name="استدعاء", description="إرسال طلب استدعاء رسمي إلى عضو معين في الخاص.")
 @app_commands.describe(
     العضو="الشخص المستدعى", 
     السبب="سبب الاستدعاء", 
     مكان_الحضور="القناة التي يجب الحضور فيها (تظهر في DM العضو)",
-    قناة_اللوق="القناة التي تريد إرسال سجل الأمر إليها (اختياري)",
 )
 async def summon_slash(
     interaction: discord.Interaction, 
     العضو: discord.Member, 
     السبب: str, 
-    مكان_الحضور: discord.TextChannel,
-    قناة_اللوق: Optional[discord.TextChannel] = None
+    مكان_الحضور: discord.TextChannel
 ):
-    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M") 
-    
-    # 1. إنشاء نموذج الرسالة الخاصة (DM Embed)
+    # 1. إعداد رسالة الـ DM
     dm_embed = discord.Embed(
         title="🔴 إشعار رسمي (استدعاء)",
         description=f"**{العضو.mention}، تم استدعاؤك من قبل الإدارة بموجب هذا الإشعار.**",
-        color=0x992d22 # اللون الأحمر الداكن
+        color=0x992d22 
     )
-
-    # ⚠️ هنا يتم وضع مكان الحضور (القناة المحددة عند إجراء الأمر) داخل الـ DM
     dm_embed.add_field(name="🔹 **مكان الحضور**", value=f"مطلوب حضورك فوراً في: **{مكان_الحضور.mention}**", inline=False)
     dm_embed.add_field(name="📝 **سبب الاستدعاء**", value=f"```\n{السبب}\n```", inline=False)
     dm_embed.add_field(name="المستدعي (المسؤول)", value=interaction.user.mention, inline=True) 
-    
     dm_embed.set_footer(text="في حال عدم الحضور سيتم اتخاذ الإجراءات اللازمة.")
 
-    # 2. محاولة إرسال الرسالة الخاصة
+    # 2. محاولة إرسال الرسالة الخاصة والرد على المستخدم
     try:
         await العضو.send(embed=dm_embed)
         await interaction.response.send_message(f"✅ تم إرسال رسالة الاستدعاء إلى {العضو.mention} في الخاص.", ephemeral=True)
     except discord.Forbidden:
         await interaction.response.send_message(f"❌ تعذر إرسال رسالة في الخاص للعضو {العضو.mention}. تم إرسالها في القناة بدلاً من ذلك.", embed=dm_embed)
 
-    # 3. تحديد قناة السجل الديناميكية أو الافتراضية وإرسال اللوق (Log)
-    log_destination = قناة_اللوق or (bot.get_channel(LOG_CHANNEL_ID) if 'LOG_CHANNEL_ID' in globals() else None)
-    
-    if log_destination:
-        log_embed = discord.Embed(
-            title="📞 سجل أمر استدعاء",
-            description=f"قام {interaction.user.mention} باستدعاء {العضو.mention}.",
-            color=discord.Color.red(),
-            timestamp=interaction.created_at
-        )
-        log_embed.add_field(name="السبب المعلن", value=السبب, inline=False)
-        log_embed.add_field(name="مكان الحضور المحدد", value=مكان_الحضور.mention, inline=False)
-        
-        try:
-            await log_destination.send(embed=log_embed)
-        except discord.Forbidden:
-            pass
-
+    # 3. إرسال اللوق تلقائياً باستخدام الدالة المساعدة
+    log_desc = f"قام {interaction.user.mention} باستدعاء {العضو.mention}.\nالسبب: {السبب}\nمكان الحضور: {مكان_الحضور.mention}"
+    await send_log("📞 سجل أمر استدعاء", log_desc, interaction, discord.Color.red())
 
 
 import discord
@@ -300,6 +274,7 @@ if __name__ == "__main__":
         bot.run(TOKEN)
     else:
         print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+
 
 
 

@@ -246,21 +246,22 @@ async def list_role_members(interaction: discord.Interaction, role: discord.Role
     
     await interaction.followup.send(embed=embed)
 
+import os
 from flask import Flask
 from threading import Thread
+import discord # تأكد من استيراد مكتبة ديسكورد
 
-# 1. تعريف التطبيق
 app = Flask('')
 
 @app.route('/')
 def home():
     return "I am alive"
 
-# 2. دالة التشغيل
 def run():
-    app.run(host='0.0.0.0', port=10000)
+    # Render يطلب سحب المنفذ من البيئة (PORT) وإلا يستخدم 10000
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
 
-# 3. دالة الـ Ping
 def keep_alive():
     t = Thread(target=run)
     t.start()
@@ -268,12 +269,19 @@ def keep_alive():
 # ---------------------- تشغيل البوت ----------------------
 if __name__ == "__main__":
     keep_alive()
+    
+    # تأكد أنك أضفت DISCORD_TOKEN في إعدادات Environment Variables في موقع Render
     TOKEN = os.getenv('DISCORD_TOKEN')
     
     if TOKEN:
-        bot.run(TOKEN)
+        try:
+            # استبدل bot بـ اسم المتغير اللي عرفت فيه البوت (مثلاً client أو bot)
+            bot.run(TOKEN) 
+        except Exception as e:
+            print(f"❌ حدث خطأ أثناء تشغيل البوت: {e}")
     else:
-        print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة!")
+        print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة (Environment Variables)!")
+
 
 
 

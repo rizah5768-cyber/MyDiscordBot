@@ -251,7 +251,7 @@ import discord
 from flask import Flask
 from threading import Thread
 
-# 1. إعداد سيرفر Flask الصغير (لإبقاء البوت حياً)
+# 1. إعداد سيرفر الويب (الرابط اللي يعطيك i am alive)
 app = Flask('')
 
 @app.route('/')
@@ -259,40 +259,48 @@ def home():
     return "I am alive"
 
 def run():
-    # سحب المنفذ من Render أو استخدام 10000 كافتراضي
+    # سحب المنفذ من Render تلقائياً
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
 
 def keep_alive():
     t = Thread(target=run)
+    t.daemon = True # يضمن إغلاق السيرفر مع إغلاق الكود
     t.start()
 
-# 2. إعدادات البوت (تأكد من تفعيل الـ Intents في موقع المطورين)
+# 2. إعدادات البوت والصلاحيات
 intents = discord.Intents.default()
-intents.message_content = True # ضروري لقراءة الرسائل
-# إذا كان كودك يستخدم commands.Bot استبدله هنا
-bot = discord.Client(intents=intents) 
+intents.message_content = True 
+intents.members = True
+
+# تعريف البوت (استخدمنا Client لضمان أعلى توافق)
+bot = discord.Client(intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f'✅ تم تسجيل الدخول بنجاح باسم: {bot.user}')
+    print(f'✅ مبروك! البوت الآن أونلاين باسم: {bot.user}')
 
-# 3. التشغيل النهائي
+# 3. تشغيل الكود ومعالجة الحظر (Rate Limit)
 if __name__ == "__main__":
-    print("🚀 جاري بدء تشغيل السيرفر...")
-    keep_alive() # تشغيل Flask في خلفية الكود
+    print("🚀 جاري محاولة تشغيل السيرفر والبوت...")
+    keep_alive() 
     
-    # تأكد أنك وضعت التوكن في Environment Variables بموقع Render باسم DISCORD_TOKEN
+    # تأكد أنك أضفت DISCORD_TOKEN في خانة الـ Environment Variables في موقع Render
     TOKEN = os.getenv('DISCORD_TOKEN')
     
     if TOKEN:
-        print("⏳ جاري محاولة الاتصال بديسكورد...")
         try:
             bot.run(TOKEN)
+        except discord.errors.HTTPException as e:
+            if e.status == 429:
+                print("❌ حظر مؤقت من ديسكورد (Rate Limit).")
+                print("💡 الحل: انتظر 10 دقائق أو أعد عمل Manual Deploy لتغيير الـ IP.")
+            else:
+                print(f"❌ خطأ في الاتصال بديسكورد: {e}")
         except Exception as e:
-            print(f"❌ فشل تشغيل البوت: {e}")
+            print(f"❌ حدث خطأ غير متوقع: {e}")
     else:
-        print("❌ خطأ: لم يتم العثور على التوكن (DISCORD_TOKEN) في الإعدادات!")
+        print("❌ خطأ: لم أجد 'DISCORD_TOKEN' في إعدادات Render (Environment Variables)!")
 
 
 

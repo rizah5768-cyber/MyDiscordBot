@@ -247,10 +247,11 @@ async def list_role_members(interaction: discord.Interaction, role: discord.Role
     await interaction.followup.send(embed=embed)
 
 import os
+import discord
 from flask import Flask
 from threading import Thread
-import discord # تأكد من استيراد مكتبة ديسكورد
 
+# 1. إعداد سيرفر Flask الصغير (لإبقاء البوت حياً)
 app = Flask('')
 
 @app.route('/')
@@ -258,7 +259,7 @@ def home():
     return "I am alive"
 
 def run():
-    # Render يطلب سحب المنفذ من البيئة (PORT) وإلا يستخدم 10000
+    # سحب المنفذ من Render أو استخدام 10000 كافتراضي
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
 
@@ -266,21 +267,34 @@ def keep_alive():
     t = Thread(target=run)
     t.start()
 
-# ---------------------- تشغيل البوت ----------------------
+# 2. إعدادات البوت (تأكد من تفعيل الـ Intents في موقع المطورين)
+intents = discord.Intents.default()
+intents.message_content = True # ضروري لقراءة الرسائل
+# إذا كان كودك يستخدم commands.Bot استبدله هنا
+bot = discord.Client(intents=intents) 
+
+@bot.event
+async def on_ready():
+    print(f'✅ تم تسجيل الدخول بنجاح باسم: {bot.user}')
+
+# 3. التشغيل النهائي
 if __name__ == "__main__":
-    keep_alive()
+    print("🚀 جاري بدء تشغيل السيرفر...")
+    keep_alive() # تشغيل Flask في خلفية الكود
     
-    # تأكد أنك أضفت DISCORD_TOKEN في إعدادات Environment Variables في موقع Render
+    # تأكد أنك وضعت التوكن في Environment Variables بموقع Render باسم DISCORD_TOKEN
     TOKEN = os.getenv('DISCORD_TOKEN')
     
     if TOKEN:
+        print("⏳ جاري محاولة الاتصال بديسكورد...")
         try:
-            # استبدل bot بـ اسم المتغير اللي عرفت فيه البوت (مثلاً client أو bot)
-            bot.run(TOKEN) 
+            bot.run(TOKEN)
         except Exception as e:
-            print(f"❌ حدث خطأ أثناء تشغيل البوت: {e}")
+            print(f"❌ فشل تشغيل البوت: {e}")
     else:
-        print("❌ خطأ: التوكن (DISCORD_TOKEN) غير موجود في إعدادات البيئة (Environment Variables)!")
+        print("❌ خطأ: لم يتم العثور على التوكن (DISCORD_TOKEN) في الإعدادات!")
+
+
 
 
 
